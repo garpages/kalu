@@ -1,0 +1,3 @@
+create table if not exists public.shoe_models(id uuid primary key default gen_random_uuid(),code text not null unique,name text default '',upper_material text default '',sole_material text default '',insole text default '',shoe_last text default '',heel text default '',colors text default '',lining text default '',stitching text default '',description text default '',created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+create table if not exists public.shoe_photos(id uuid primary key default gen_random_uuid(),model_id uuid not null references public.shoe_models(id) on delete cascade,storage_path text not null,created_at timestamptz not null default now());
+-- بعد از فعال‌سازی Supabase Auth، RLS و policyهای دسترسی را اضافه کنید.

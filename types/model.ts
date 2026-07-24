@@ -1,0 +1,1 @@
+export type ShoeModel={code:string;name:string;upper:string;sole:string;insole:string;last:string;heel:string;color:string;lining:string;stitch:string;description:string;photos:string[]};
