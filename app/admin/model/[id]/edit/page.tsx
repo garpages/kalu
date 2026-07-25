@@ -19,6 +19,8 @@ type ShoeModel = {
     material_type_1: string | null;
     material_type_2: string | null;
     hardware: string | null;
+    golcheh: string | null;
+    aster: string | null;
     description: string | null;
 };
 
@@ -34,6 +36,8 @@ const fieldList: [keyof ShoeModel, string, boolean][] = [
     ["material_type_1", "نوع جنس اول", false],
     ["material_type_2", "نوع جنس دوم", false],
     ["hardware", "یراق کار", false],
+    ["golcheh", "گلچه", false],
+    ["aster", "آستر", false],
 ];
 
 export default function EditModelPage() {
@@ -123,6 +127,8 @@ export default function EditModelPage() {
                 material_type_1: form.material_type_1,
                 material_type_2: form.material_type_2,
                 hardware: form.hardware,
+                golcheh: form.golcheh,
+                aster: form.aster,
                 description: form.description,
             })
             .eq("id", form.id);

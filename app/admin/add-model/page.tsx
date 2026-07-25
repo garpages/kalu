@@ -18,6 +18,8 @@ const fieldList: [string, string, boolean][] = [
     ["material_type_1", "نوع جنس اول", false],
     ["material_type_2", "نوع جنس دوم", false],
     ["hardware", "یراق کار", false],
+    ["golcheh", "گلچه", false],
+    ["aster", "آستر", false],
 ];
 
 export default function AddModelPage() {
@@ -35,6 +37,8 @@ export default function AddModelPage() {
         material_type_1: "",
         material_type_2: "",
         hardware: "",
+        golcheh: "",
+        aster: "",
         description: "",
     });
 
@@ -103,6 +107,8 @@ export default function AddModelPage() {
                     material_type_1: form.material_type_1.trim() || null,
                     material_type_2: form.material_type_2.trim() || null,
                     hardware: form.hardware.trim() || null,
+                    golcheh: form.golcheh.trim() || null,
+                    aster: form.aster.trim() || null,
                     description: form.description.trim() || null,
                 },
             ])

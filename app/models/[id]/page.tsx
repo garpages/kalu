@@ -20,6 +20,8 @@ type ShoeModel = {
     material_type_1: string | null;
     material_type_2: string | null;
     hardware: string | null;
+    golcheh: string | null;
+    aster: string | null;
     description: string | null;
 };
 
@@ -113,6 +115,8 @@ export default function ModelViewPage() {
         ["نوع جنس اول", model.material_type_1],
         ["نوع جنس دوم", model.material_type_2],
         ["یراق کار", model.hardware],
+        ["گلچه", model.golcheh],
+        ["آستر", model.aster],
     ];
 
     return (
