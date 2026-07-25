@@ -1,1 +1,0 @@
-import ModelForm from "@/components/ModelForm";export default function Page(){return <ModelForm/>}
