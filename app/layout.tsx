@@ -4,7 +4,6 @@ import type { Metadata, Viewport } from "next";
 export const metadata: Metadata = {
     title: "KALU | مدیریت مدل‌های کفش",
     description: "سیستم مدیریت اطلاعات مدل‌های کفش",
-    manifest: "/manifest.json",
     icons: {
         icon: [
             { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
