@@ -125,7 +125,16 @@ export default function ModelViewPage() {
 
             <main className="container page">
                 <div className="panel">
-                    <h1>کد کار: {model.code}</h1>
+                    <div className="panel-head">
+                        <h1 style={{ margin: 0 }}>کد کار: {model.code}</h1>
+
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => window.print()}
+                        >
+                            🖨️ چاپ مشخصات
+                        </button>
+                    </div>
 
                     <div className="detail-grid" style={{ marginTop: 18 }}>
                         {rows.map(([label, value]) => (

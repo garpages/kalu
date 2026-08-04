@@ -10,6 +10,8 @@ type ModelImage = {
     created_at: string;
 };
 
+type ResolvedImage = ModelImage & { url: string | null };
+
 type ImageGalleryProps = {
     modelId: string;
     refreshKey?: number;
@@ -21,9 +23,10 @@ export default function ImageGallery({
     refreshKey,
     readOnly = false,
 }: ImageGalleryProps) {
-    const [images, setImages] = useState<ModelImage[]>([]);
+    const [images, setImages] = useState<ResolvedImage[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleting, setDeleting] = useState<string | null>(null);
+    const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
     async function loadImages() {
         setLoading(true);
@@ -40,13 +43,56 @@ export default function ImageGallery({
             return;
         }
 
-        setImages(data || []);
+        const rows = data || [];
+
+        if (rows.length === 0) {
+            setImages([]);
+            setLoading(false);
+            return;
+        }
+
+        const { data: signedUrls } = await supabase.storage
+            .from("shoe-images")
+            .createSignedUrls(
+                rows.map((row) => row.storage_path),
+                3600
+            );
+
+        const resolved: ResolvedImage[] = rows.map((row, index) => ({
+            ...row,
+            url: signedUrls?.[index]?.signedUrl || null,
+        }));
+
+        setImages(resolved);
         setLoading(false);
     }
 
     useEffect(() => {
         loadImages();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [modelId, refreshKey]);
+
+    useEffect(() => {
+        function handleKey(e: KeyboardEvent) {
+            if (lightboxIndex === null) return;
+
+            if (e.key === "Escape") setLightboxIndex(null);
+            if (e.key === "ArrowRight") stepLightbox(1);
+            if (e.key === "ArrowLeft") stepLightbox(-1);
+        }
+
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [lightboxIndex, images.length]);
+
+    function stepLightbox(direction: number) {
+        setLightboxIndex((current) => {
+            if (current === null) return current;
+            const next = (current + direction + images.length) % images.length;
+            return next;
+        });
+    }
 
     async function handleDelete(image: ModelImage) {
         const confirmed = window.confirm(
@@ -96,75 +142,88 @@ export default function ImageGallery({
                 <p className="muted">هنوز تصویری برای این مدل ثبت نشده است.</p>
             ) : (
                 <div className="gallery">
-                    {images.map((image) => (
-                        <ImageCard
-                            key={image.id}
-                            image={image}
-                            deleting={deleting === image.id}
-                            onDelete={() => handleDelete(image)}
-                            readOnly={readOnly}
-                        />
+                    {images.map((image, index) => (
+                        <div className="gallery-item" key={image.id}>
+                            {image.url ? (
+                                <img
+                                    src={image.url}
+                                    alt="تصویر مدل کفش"
+                                    style={{ cursor: "zoom-in" }}
+                                    onClick={() => setLightboxIndex(index)}
+                                />
+                            ) : (
+                                <div className="gallery-placeholder">
+                                    تصویر قابل نمایش نیست.
+                                </div>
+                            )}
+
+                            {!readOnly && (
+                                <div className="gallery-item-footer">
+                                    <button
+                                        className="btn btn-danger btn-block"
+                                        onClick={() => handleDelete(image)}
+                                        disabled={deleting === image.id}
+                                    >
+                                        {deleting === image.id
+                                            ? "در حال حذف..."
+                                            : "🗑️ حذف"}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     ))}
                 </div>
             )}
-        </div>
-    );
-}
 
-function ImageCard({
-    image,
-    deleting,
-    onDelete,
-    readOnly,
-}: {
-    image: ModelImage;
-    deleting: boolean;
-    onDelete: () => void;
-    readOnly: boolean;
-}) {
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function getImageUrl() {
-            setLoading(true);
-
-            const { data, error } = await supabase.storage
-                .from("shoe-images")
-                .createSignedUrl(image.storage_path, 3600);
-
-            if (error) {
-                console.error("Create Signed URL Error:", error);
-                setLoading(false);
-                return;
-            }
-
-            setImageUrl(data.signedUrl);
-            setLoading(false);
-        }
-
-        getImageUrl();
-    }, [image.storage_path]);
-
-    return (
-        <div className="gallery-item">
-            {loading ? (
-                <div className="gallery-placeholder">در حال بارگذاری...</div>
-            ) : imageUrl ? (
-                <img src={imageUrl} alt="تصویر مدل کفش" />
-            ) : (
-                <div className="gallery-placeholder">تصویر قابل نمایش نیست.</div>
-            )}
-
-            {!readOnly && (
-                <div className="gallery-item-footer">
+            {lightboxIndex !== null && images[lightboxIndex]?.url && (
+                <div
+                    className="lightbox-overlay"
+                    onClick={() => setLightboxIndex(null)}
+                >
                     <button
-                        className="btn btn-danger btn-block"
-                        onClick={onDelete}
-                        disabled={deleting}
+                        className="lightbox-close"
+                        onClick={() => setLightboxIndex(null)}
+                        aria-label="بستن"
                     >
-                        {deleting ? "در حال حذف..." : "🗑️ حذف"}
+                        ✕
                     </button>
+
+                    {images.length > 1 && (
+                        <button
+                            className="lightbox-nav lightbox-prev"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                stepLightbox(-1);
+                            }}
+                            aria-label="قبلی"
+                        >
+                            ‹
+                        </button>
+                    )}
+
+                    <img
+                        className="lightbox-img"
+                        src={images[lightboxIndex].url!}
+                        alt="تصویر مدل کفش"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+
+                    {images.length > 1 && (
+                        <button
+                            className="lightbox-nav lightbox-next"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                stepLightbox(1);
+                            }}
+                            aria-label="بعدی"
+                        >
+                            ›
+                        </button>
+                    )}
+
+                    <div className="lightbox-counter">
+                        {lightboxIndex + 1} / {images.length}
+                    </div>
                 </div>
             )}
         </div>

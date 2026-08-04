@@ -65,9 +65,14 @@ export default function DashboardPage() {
         load();
     }, [router]);
 
-    const filteredModels = models.filter((model) =>
-        model.code.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredModels = models.filter((model) => {
+        const q = search.trim().toLowerCase();
+        if (!q) return true;
+
+        return [model.code, model.material_type_1, model.material_type_2, model.description]
+            .filter(Boolean)
+            .some((field) => field!.toLowerCase().includes(q));
+    });
 
     return (
         <>
@@ -78,7 +83,7 @@ export default function DashboardPage() {
                     <input
                         className="input search"
                         type="text"
-                        placeholder="جستجو بر اساس کد کار..."
+                        placeholder="جستجو بر اساس کد یا جنس..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />

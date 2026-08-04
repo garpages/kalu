@@ -73,9 +73,32 @@ export default function AdminPage() {
         loadModels();
     }, [router]);
 
-    const filteredModels = models.filter((model) =>
-        model.code.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredModels = models.filter((model) => {
+        const q = search.trim().toLowerCase();
+        if (!q) return true;
+
+        return [
+            model.code,
+            model.material_type_1,
+            model.material_type_2,
+            model.hardware,
+            model.last_code,
+            model.sole_code,
+            model.description,
+        ]
+            .filter(Boolean)
+            .some((field) => field!.toLowerCase().includes(q));
+    });
+
+    const materialCounts = models.reduce<Record<string, number>>((acc, m) => {
+        const key = m.material_type_1?.trim();
+        if (key) acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {});
+
+    const topMaterials = Object.entries(materialCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2);
 
     return (
         <>
@@ -89,18 +112,40 @@ export default function AdminPage() {
                         <p className="muted">تعداد کل: {models.length}</p>
                     </div>
 
-                    <Link href="/admin/add-model">
-                        <button className="btn btn-primary">
-                            ➕ افزودن مدل جدید
-                        </button>
-                    </Link>
+                    <div className="actions" style={{ marginTop: 0 }}>
+                        <Link href="/admin/users">
+                            <button className="btn btn-secondary">
+                                👥 مدیریت کاربران
+                            </button>
+                        </Link>
+
+                        <Link href="/admin/add-model">
+                            <button className="btn btn-primary">
+                                ➕ افزودن مدل جدید
+                            </button>
+                        </Link>
+                    </div>
+                </div>
+
+                <div className="stats">
+                    <div className="stat">
+                        <span className="muted">تعداد کل مدل‌ها</span>
+                        <b>{models.length}</b>
+                    </div>
+
+                    {topMaterials.map(([material, count]) => (
+                        <div className="stat" key={material}>
+                            <span className="muted">پرکاربردترین جنس: {material}</span>
+                            <b>{count}</b>
+                        </div>
+                    ))}
                 </div>
 
                 <div className="toolbar">
                     <input
                         className="input search"
                         type="text"
-                        placeholder="جستجو بر اساس کد کار..."
+                        placeholder="جستجو بر اساس کد، جنس، یراق یا توضیحات..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -133,6 +178,18 @@ export default function AdminPage() {
                                             }
                                         >
                                             مشاهده جزئیات
+                                        </button>
+
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={() =>
+                                                router.push(
+                                                    `/admin/add-model?copyFrom=${model.id}`
+                                                )
+                                            }
+                                            title="ساخت مدل جدید با کپی از این مدل"
+                                        >
+                                            📋 کپی
                                         </button>
                                     </div>
                                 </div>

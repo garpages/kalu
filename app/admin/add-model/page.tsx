@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
@@ -22,29 +22,68 @@ const fieldList: [string, string, boolean][] = [
     ["aster", "آستر", false],
 ];
 
-export default function AddModelPage() {
+const emptyForm = {
+    code: "",
+    last_code: "",
+    sole_code: "",
+    heel_code: "",
+    outsole_code: "",
+    wedge_code: "",
+    toe_work: "",
+    toe_sole: "",
+    material_type_1: "",
+    material_type_2: "",
+    hardware: "",
+    golcheh: "",
+    aster: "",
+    description: "",
+};
+
+function AddModelForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const copyFrom = searchParams.get("copyFrom");
 
-    const [form, setForm] = useState({
-        code: "",
-        last_code: "",
-        sole_code: "",
-        heel_code: "",
-        outsole_code: "",
-        wedge_code: "",
-        toe_work: "",
-        toe_sole: "",
-        material_type_1: "",
-        material_type_2: "",
-        hardware: "",
-        golcheh: "",
-        aster: "",
-        description: "",
-    });
-
+    const [form, setForm] = useState(emptyForm);
+    const [copyNotice, setCopyNotice] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [success, setSuccess] = useState(false);
+
+    useEffect(() => {
+        async function loadSourceModel() {
+            if (!copyFrom) return;
+
+            const { data, error } = await supabase
+                .from("shoe_models")
+                .select("*")
+                .eq("id", copyFrom)
+                .single();
+
+            if (error || !data) return;
+
+            setForm({
+                code: "",
+                last_code: data.last_code || "",
+                sole_code: data.sole_code || "",
+                heel_code: data.heel_code || "",
+                outsole_code: data.outsole_code || "",
+                wedge_code: data.wedge_code || "",
+                toe_work: data.toe_work || "",
+                toe_sole: data.toe_sole || "",
+                material_type_1: data.material_type_1 || "",
+                material_type_2: data.material_type_2 || "",
+                hardware: data.hardware || "",
+                golcheh: data.golcheh || "",
+                aster: data.aster || "",
+                description: data.description || "",
+            });
+
+            setCopyNotice(true);
+        }
+
+        loadSourceModel();
+    }, [copyFrom]);
 
     function handleChange(
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -135,69 +174,82 @@ export default function AddModelPage() {
     }
 
     return (
-        <>
-            <Header />
+        <main className="container page">
+            <div className="panel">
+                <h1>افزودن مدل جدید</h1>
+                <p className="muted">مشخصات فنی مدل کفش را ثبت کنید.</p>
 
-            <main className="container page">
-                <div className="panel">
-                    <h1>افزودن مدل جدید</h1>
-                    <p className="muted">مشخصات فنی مدل کفش را ثبت کنید.</p>
+                {copyNotice && (
+                    <p className="status-message status-success">
+                        اطلاعات از یک مدل مشابه کپی شد — فقط کد کار جدید را وارد کنید.
+                    </p>
+                )}
 
-                    <hr />
+                <hr />
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-grid">
-                            {fieldList.map(([name, label, required]) => (
-                                <div className="field" key={name}>
-                                    <label>
-                                        {label}
-                                        {required ? " *" : ""}
-                                    </label>
-                                    <input
-                                        className="input"
-                                        name={name}
-                                        value={form[name as keyof typeof form]}
-                                        onChange={handleChange}
-                                        required={required}
-                                    />
-                                </div>
-                            ))}
-
-                            <div className="field full">
-                                <label>توضیحات</label>
-                                <textarea
-                                    className="textarea"
-                                    name="description"
-                                    value={form.description}
+                <form onSubmit={handleSubmit}>
+                    <div className="form-grid">
+                        {fieldList.map(([name, label, required]) => (
+                            <div className="field" key={name}>
+                                <label>
+                                    {label}
+                                    {required ? " *" : ""}
+                                </label>
+                                <input
+                                    className="input"
+                                    name={name}
+                                    value={form[name as keyof typeof form]}
                                     onChange={handleChange}
+                                    required={required}
                                 />
                             </div>
-                        </div>
+                        ))}
 
-                        <div className="actions">
-                            <button
-                                className="btn btn-primary"
-                                type="submit"
-                                disabled={loading}
-                            >
-                                {loading ? "در حال ذخیره..." : "ذخیره مدل"}
+                        <div className="field full">
+                            <label>توضیحات</label>
+                            <textarea
+                                className="textarea"
+                                name="description"
+                                value={form.description}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="actions">
+                        <button
+                            className="btn btn-primary"
+                            type="submit"
+                            disabled={loading}
+                        >
+                            {loading ? "در حال ذخیره..." : "ذخیره مدل"}
+                        </button>
+
+                        <Link href="/admin">
+                            <button className="btn btn-secondary" type="button">
+                                انصراف
                             </button>
+                        </Link>
+                    </div>
 
-                            <Link href="/admin">
-                                <button className="btn btn-secondary" type="button">
-                                    انصراف
-                                </button>
-                            </Link>
-                        </div>
+                    {message && (
+                        <p className={`status-message ${success ? "status-success" : "status-error"}`}>
+                            {message}
+                        </p>
+                    )}
+                </form>
+            </div>
+        </main>
+    );
+}
 
-                        {message && (
-                            <p className={`status-message ${success ? "status-success" : "status-error"}`}>
-                                {message}
-                            </p>
-                        )}
-                    </form>
-                </div>
-            </main>
+export default function AddModelPage() {
+    return (
+        <>
+            <Header />
+            <Suspense fallback={<main className="container page"><p className="muted">در حال بارگذاری...</p></main>}>
+                <AddModelForm />
+            </Suspense>
         </>
     );
 }
