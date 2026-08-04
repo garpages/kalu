@@ -26,6 +26,7 @@ export default function AdminPage() {
     const router = useRouter();
 
     const [models, setModels] = useState<ShoeModel[]>([]);
+    const [modelIdsWithImages, setModelIdsWithImages] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
 
@@ -67,6 +68,15 @@ export default function AdminPage() {
             }
 
             setModels(data || []);
+
+            const { data: imageRows } = await supabase
+                .from("model_images")
+                .select("model_id");
+
+            setModelIdsWithImages(
+                new Set((imageRows || []).map((row) => row.model_id))
+            );
+
             setLoading(false);
         }
 
@@ -99,6 +109,10 @@ export default function AdminPage() {
     const topMaterials = Object.entries(materialCounts)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 2);
+
+    const modelsWithoutImages = models.filter(
+        (m) => !modelIdsWithImages.has(m.id)
+    );
 
     return (
         <>
@@ -140,6 +154,36 @@ export default function AdminPage() {
                         </div>
                     ))}
                 </div>
+
+                {!loading && modelsWithoutImages.length > 0 && (
+                    <div className="panel" style={{ marginBottom: 20, borderColor: "var(--danger)" }}>
+                        <h2>⚠️ مدل‌های بدون عکس ({modelsWithoutImages.length})</h2>
+                        <p className="muted">این مدل‌ها ثبت شده‌اند ولی هنوز عکسی برایشان آپلود نشده.</p>
+
+                        <div className="grid" style={{ marginTop: 14 }}>
+                            {modelsWithoutImages.map((model) => (
+                                <article className="card" key={model.id}>
+                                    <div className="card-body">
+                                        <div className="code">کد کار: {model.code}</div>
+                                        <div className="muted">
+                                            {model.material_type_1 || "بدون جنس ثبت‌شده"}
+                                        </div>
+                                        <div className="card-actions">
+                                            <button
+                                                className="btn btn-primary"
+                                                onClick={() =>
+                                                    router.push(`/admin/model/${model.id}`)
+                                                }
+                                            >
+                                                افزودن عکس
+                                            </button>
+                                        </div>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="toolbar">
                     <input

@@ -166,13 +166,6 @@ export default function ModelDetailsPage() {
                         </div>
 
                         <div className="actions" style={{ marginTop: 0 }}>
-                            <button
-                                className="btn btn-secondary"
-                                onClick={() => window.print()}
-                            >
-                                🖨️ چاپ مشخصات
-                            </button>
-
                             <Link href={`/admin/model/${model.id}/edit`}>
                                 <button className="btn btn-secondary">
                                     ✏️ ویرایش مدل
