@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
+import StarButton from "@/components/StarButton";
 
 type ShoeModel = {
     id: string;
@@ -26,7 +27,8 @@ export default function AdminPage() {
     const router = useRouter();
 
     const [models, setModels] = useState<ShoeModel[]>([]);
-    const [modelIdsWithImages, setModelIdsWithImages] = useState<Set<string>>(new Set());
+    const [missingImagesCount, setMissingImagesCount] = useState(0);
+    const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
 
@@ -73,9 +75,20 @@ export default function AdminPage() {
                 .from("model_images")
                 .select("model_id");
 
-            setModelIdsWithImages(
-                new Set((imageRows || []).map((row) => row.model_id))
+            const idsWithImages = new Set(
+                (imageRows || []).map((row) => row.model_id)
             );
+
+            setMissingImagesCount(
+                (data || []).filter((m) => !idsWithImages.has(m.id)).length
+            );
+
+            const { data: favRows } = await supabase
+                .from("favorites")
+                .select("model_id")
+                .eq("user_id", user.id);
+
+            setFavoriteIds(new Set((favRows || []).map((r) => r.model_id)));
 
             setLoading(false);
         }
@@ -110,10 +123,6 @@ export default function AdminPage() {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 2);
 
-    const modelsWithoutImages = models.filter(
-        (m) => !modelIdsWithImages.has(m.id)
-    );
-
     return (
         <>
             <Header />
@@ -127,6 +136,18 @@ export default function AdminPage() {
                     </div>
 
                     <div className="actions" style={{ marginTop: 0 }}>
+                        <Link href="/favorites">
+                            <button className="btn btn-secondary">
+                                ⭐ پرکاربردها
+                            </button>
+                        </Link>
+
+                        <Link href="/admin/missing-images">
+                            <button className="btn btn-secondary">
+                                ⚠️ بدون عکس {missingImagesCount > 0 ? `(${missingImagesCount})` : ""}
+                            </button>
+                        </Link>
+
                         <Link href="/admin/users">
                             <button className="btn btn-secondary">
                                 👥 مدیریت کاربران
@@ -155,36 +176,6 @@ export default function AdminPage() {
                     ))}
                 </div>
 
-                {!loading && modelsWithoutImages.length > 0 && (
-                    <div className="panel" style={{ marginBottom: 20, borderColor: "var(--danger)" }}>
-                        <h2>⚠️ مدل‌های بدون عکس ({modelsWithoutImages.length})</h2>
-                        <p className="muted">این مدل‌ها ثبت شده‌اند ولی هنوز عکسی برایشان آپلود نشده.</p>
-
-                        <div className="grid" style={{ marginTop: 14 }}>
-                            {modelsWithoutImages.map((model) => (
-                                <article className="card" key={model.id}>
-                                    <div className="card-body">
-                                        <div className="code">کد کار: {model.code}</div>
-                                        <div className="muted">
-                                            {model.material_type_1 || "بدون جنس ثبت‌شده"}
-                                        </div>
-                                        <div className="card-actions">
-                                            <button
-                                                className="btn btn-primary"
-                                                onClick={() =>
-                                                    router.push(`/admin/model/${model.id}`)
-                                                }
-                                            >
-                                                افزودن عکس
-                                            </button>
-                                        </div>
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 <div className="toolbar">
                     <input
                         className="input search"
@@ -206,8 +197,29 @@ export default function AdminPage() {
                         {filteredModels.map((model) => (
                             <article className="card" key={model.id}>
                                 <div className="card-body">
-                                    <div className="code">
-                                        کد کار: {model.code}
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "flex-start",
+                                        }}
+                                    >
+                                        <div className="code">
+                                            کد کار: {model.code}
+                                        </div>
+
+                                        <StarButton
+                                            modelId={model.id}
+                                            isFavorite={favoriteIds.has(model.id)}
+                                            onChange={(fav) =>
+                                                setFavoriteIds((current) => {
+                                                    const next = new Set(current);
+                                                    if (fav) next.add(model.id);
+                                                    else next.delete(model.id);
+                                                    return next;
+                                                })
+                                            }
+                                        />
                                     </div>
 
                                     <div className="muted">

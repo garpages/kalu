@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
+import CopyFromPicker from "@/components/CopyFromPicker";
 
 type ShoeModel = {
     id: string;
@@ -90,6 +91,35 @@ export default function EditModelPage() {
 
         loadModel();
     }, [params.id, router]);
+
+    async function applyCopyFrom(sourceId: string) {
+        if (!form) return;
+
+        const { data, error } = await supabase
+            .from("shoe_models")
+            .select("*")
+            .eq("id", sourceId)
+            .single();
+
+        if (error || !data) return;
+
+        setForm({
+            ...form,
+            last_code: data.last_code || "",
+            sole_code: data.sole_code || "",
+            heel_code: data.heel_code || "",
+            outsole_code: data.outsole_code || "",
+            wedge_code: data.wedge_code || "",
+            toe_work: data.toe_work || "",
+            toe_sole: data.toe_sole || "",
+            material_type_1: data.material_type_1 || "",
+            material_type_2: data.material_type_2 || "",
+            hardware: data.hardware || "",
+            golcheh: data.golcheh || "",
+            aster: data.aster || "",
+            description: data.description || "",
+        });
+    }
 
     function handleChange(
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -187,6 +217,10 @@ export default function EditModelPage() {
                 <div className="panel">
                     <h1>ویرایش مدل</h1>
                     <p className="muted">کد کار: {form.code}</p>
+
+                    <div style={{ margin: "12px 0" }}>
+                        <CopyFromPicker onSelect={applyCopyFrom} />
+                    </div>
 
                     <hr />
 

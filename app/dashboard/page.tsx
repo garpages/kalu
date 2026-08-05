@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
+import StarButton from "@/components/StarButton";
 
 type ShoeModel = {
     id: string;
@@ -18,6 +19,7 @@ export default function DashboardPage() {
     const router = useRouter();
 
     const [models, setModels] = useState<ShoeModel[]>([]);
+    const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
 
@@ -59,6 +61,14 @@ export default function DashboardPage() {
             }
 
             setModels(data || []);
+
+            const { data: favRows } = await supabase
+                .from("favorites")
+                .select("model_id")
+                .eq("user_id", user.id);
+
+            setFavoriteIds(new Set((favRows || []).map((r) => r.model_id)));
+
             setLoading(false);
         }
 
@@ -80,6 +90,10 @@ export default function DashboardPage() {
 
             <main className="container page">
                 <div className="toolbar">
+                    <Link href="/favorites">
+                        <button className="btn btn-secondary">⭐ پرکاربردها</button>
+                    </Link>
+
                     <input
                         className="input search"
                         type="text"
@@ -100,8 +114,29 @@ export default function DashboardPage() {
                         {filteredModels.map((model) => (
                             <article className="card" key={model.id}>
                                 <div className="card-body">
-                                    <div className="code">
-                                        کد کار: {model.code}
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "flex-start",
+                                        }}
+                                    >
+                                        <div className="code">
+                                            کد کار: {model.code}
+                                        </div>
+
+                                        <StarButton
+                                            modelId={model.id}
+                                            isFavorite={favoriteIds.has(model.id)}
+                                            onChange={(fav) =>
+                                                setFavoriteIds((current) => {
+                                                    const next = new Set(current);
+                                                    if (fav) next.add(model.id);
+                                                    else next.delete(model.id);
+                                                    return next;
+                                                })
+                                            }
+                                        />
                                     </div>
 
                                     <div className="muted">

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
+import CopyFromPicker from "@/components/CopyFromPicker";
 
 const fieldList: [string, string, boolean][] = [
     ["code", "کد کار", true],
@@ -50,39 +51,38 @@ function AddModelForm() {
     const [message, setMessage] = useState("");
     const [success, setSuccess] = useState(false);
 
+    async function applyCopyFrom(sourceId: string) {
+        const { data, error } = await supabase
+            .from("shoe_models")
+            .select("*")
+            .eq("id", sourceId)
+            .single();
+
+        if (error || !data) return;
+
+        setForm({
+            code: "",
+            last_code: data.last_code || "",
+            sole_code: data.sole_code || "",
+            heel_code: data.heel_code || "",
+            outsole_code: data.outsole_code || "",
+            wedge_code: data.wedge_code || "",
+            toe_work: data.toe_work || "",
+            toe_sole: data.toe_sole || "",
+            material_type_1: data.material_type_1 || "",
+            material_type_2: data.material_type_2 || "",
+            hardware: data.hardware || "",
+            golcheh: data.golcheh || "",
+            aster: data.aster || "",
+            description: data.description || "",
+        });
+
+        setCopyNotice(true);
+    }
+
     useEffect(() => {
-        async function loadSourceModel() {
-            if (!copyFrom) return;
-
-            const { data, error } = await supabase
-                .from("shoe_models")
-                .select("*")
-                .eq("id", copyFrom)
-                .single();
-
-            if (error || !data) return;
-
-            setForm({
-                code: "",
-                last_code: data.last_code || "",
-                sole_code: data.sole_code || "",
-                heel_code: data.heel_code || "",
-                outsole_code: data.outsole_code || "",
-                wedge_code: data.wedge_code || "",
-                toe_work: data.toe_work || "",
-                toe_sole: data.toe_sole || "",
-                material_type_1: data.material_type_1 || "",
-                material_type_2: data.material_type_2 || "",
-                hardware: data.hardware || "",
-                golcheh: data.golcheh || "",
-                aster: data.aster || "",
-                description: data.description || "",
-            });
-
-            setCopyNotice(true);
-        }
-
-        loadSourceModel();
+        if (copyFrom) applyCopyFrom(copyFrom);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [copyFrom]);
 
     function handleChange(
@@ -178,6 +178,10 @@ function AddModelForm() {
             <div className="panel">
                 <h1>افزودن مدل جدید</h1>
                 <p className="muted">مشخصات فنی مدل کفش را ثبت کنید.</p>
+
+                <div style={{ marginTop: 12 }}>
+                    <CopyFromPicker onSelect={applyCopyFrom} />
+                </div>
 
                 {copyNotice && (
                     <p className="status-message status-success">
