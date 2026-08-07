@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
 import CopyFromPicker from "@/components/CopyFromPicker";
+import { logActivity } from "@/lib/activityLog";
 
 type ShoeModel = {
     id: string;
@@ -172,6 +173,8 @@ export default function EditModelPage() {
 
         setSuccess(true);
         setMessage("تغییرات با موفقیت ذخیره شد.");
+
+        logActivity("ویرایش مدل", form.code);
 
         setTimeout(() => {
             router.push(`/admin/model/${form.id}`);

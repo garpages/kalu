@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
 import CopyFromPicker from "@/components/CopyFromPicker";
+import { logActivity } from "@/lib/activityLog";
 
 const fieldList: [string, string, boolean][] = [
     ["code", "کد کار", true],
@@ -47,6 +48,7 @@ function AddModelForm() {
 
     const [form, setForm] = useState(emptyForm);
     const [copyNotice, setCopyNotice] = useState(false);
+    const [draftFound, setDraftFound] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [success, setSuccess] = useState(false);
@@ -82,8 +84,36 @@ function AddModelForm() {
 
     useEffect(() => {
         if (copyFrom) applyCopyFrom(copyFrom);
+        else {
+            const saved = localStorage.getItem("kalu_draft_add_model");
+            if (saved) setDraftFound(true);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [copyFrom]);
+
+    useEffect(() => {
+        const hasContent = Object.values(form).some((v) => v.trim() !== "");
+        if (hasContent) {
+            localStorage.setItem("kalu_draft_add_model", JSON.stringify(form));
+        }
+    }, [form]);
+
+    function restoreDraft() {
+        const saved = localStorage.getItem("kalu_draft_add_model");
+        if (saved) {
+            try {
+                setForm(JSON.parse(saved));
+            } catch {
+                // ignore
+            }
+        }
+        setDraftFound(false);
+    }
+
+    function discardDraft() {
+        localStorage.removeItem("kalu_draft_add_model");
+        setDraftFound(false);
+    }
 
     function handleChange(
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -163,6 +193,9 @@ function AddModelForm() {
 
         console.log("Model Created Successfully:", data);
 
+        logActivity("ثبت مدل جدید", form.code);
+        localStorage.removeItem("kalu_draft_add_model");
+
         setSuccess(true);
         setMessage("مدل با موفقیت ثبت شد.");
         setLoading(false);
@@ -178,6 +211,16 @@ function AddModelForm() {
             <div className="panel">
                 <h1>افزودن مدل جدید</h1>
                 <p className="muted">مشخصات فنی مدل کفش را ثبت کنید.</p>
+
+                {draftFound && (
+                    <div className="status-message status-success" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <span>یک پیش‌نویس ذخیره‌شده پیدا شد. بازیابی بشه؟</span>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button type="button" className="btn btn-primary" onClick={restoreDraft}>بازیابی</button>
+                            <button type="button" className="btn btn-secondary" onClick={discardDraft}>نه، دور بریز</button>
+                        </div>
+                    </div>
+                )}
 
                 <div style={{ marginTop: 12 }}>
                     <CopyFromPicker onSelect={applyCopyFrom} />

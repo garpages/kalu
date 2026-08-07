@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { logActivity } from "@/lib/activityLog";
 
 type ModelImage = {
     id: string;
@@ -27,6 +29,7 @@ export default function ImageGallery({
     const [loading, setLoading] = useState(true);
     const [deleting, setDeleting] = useState<string | null>(null);
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+    const [pendingDelete, setPendingDelete] = useState<ModelImage | null>(null);
 
     async function loadImages() {
         setLoading(true);
@@ -95,12 +98,6 @@ export default function ImageGallery({
     }
 
     async function handleDelete(image: ModelImage) {
-        const confirmed = window.confirm(
-            "آیا مطمئن هستید که می‌خواهید این عکس را حذف کنید؟"
-        );
-
-        if (!confirmed) return;
-
         setDeleting(image.id);
 
         const { error: storageError } = await supabase.storage
@@ -128,6 +125,7 @@ export default function ImageGallery({
 
         setImages((current) => current.filter((item) => item.id !== image.id));
         setDeleting(null);
+        logActivity("حذف عکس");
     }
 
     if (loading) {
@@ -161,7 +159,7 @@ export default function ImageGallery({
                                 <div className="gallery-item-footer">
                                     <button
                                         className="btn btn-danger btn-block"
-                                        onClick={() => handleDelete(image)}
+                                        onClick={() => setPendingDelete(image)}
                                         disabled={deleting === image.id}
                                     >
                                         {deleting === image.id
@@ -226,6 +224,19 @@ export default function ImageGallery({
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog
+                open={pendingDelete !== null}
+                title="حذف عکس"
+                message="آیا مطمئن هستید که می‌خواهید این عکس را حذف کنید؟"
+                confirmLabel="حذف"
+                danger
+                onCancel={() => setPendingDelete(null)}
+                onConfirm={() => {
+                    if (pendingDelete) handleDelete(pendingDelete);
+                    setPendingDelete(null);
+                }}
+            />
         </div>
     );
 }

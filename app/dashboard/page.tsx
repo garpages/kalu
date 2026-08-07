@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
 import StarButton from "@/components/StarButton";
+import { saveCache, loadCache } from "@/lib/offlineCache";
 
 type ShoeModel = {
     id: string;
@@ -15,6 +16,9 @@ type ShoeModel = {
     description: string | null;
 };
 
+const PAGE_SIZE = 24;
+const CACHE_KEY = "kalu_cache_dashboard_models";
+
 export default function DashboardPage() {
     const router = useRouter();
 
@@ -22,10 +26,11 @@ export default function DashboardPage() {
     const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
+    const [offline, setOffline] = useState(false);
 
     useEffect(() => {
         async function load() {
-            // بررسی ورود کاربر
             const {
                 data: { user },
             } = await supabase.auth.getUser();
@@ -35,8 +40,6 @@ export default function DashboardPage() {
                 return;
             }
 
-            // بررسی فعال بودن حساب (نقش برای این صفحه مهم نیست،
-            // چون هم مدیر و هم کاربر عادی اجازه دیدن لیست را دارند)
             const { data: profile, error: profileError } = await supabase
                 .from("profiles")
                 .select("is_active")
@@ -44,6 +47,13 @@ export default function DashboardPage() {
                 .single();
 
             if (profileError || !profile || !profile.is_active) {
+                const cached = loadCache<ShoeModel[]>(CACHE_KEY);
+                if (cached) {
+                    setModels(cached);
+                    setOffline(true);
+                    setLoading(false);
+                    return;
+                }
                 await supabase.auth.signOut();
                 router.replace("/login");
                 return;
@@ -56,11 +66,17 @@ export default function DashboardPage() {
 
             if (error) {
                 console.error("Load Models Error:", error);
+                const cached = loadCache<ShoeModel[]>(CACHE_KEY);
+                if (cached) {
+                    setModels(cached);
+                    setOffline(true);
+                }
                 setLoading(false);
                 return;
             }
 
             setModels(data || []);
+            saveCache(CACHE_KEY, data || []);
 
             const { data: favRows } = await supabase
                 .from("favorites")
@@ -84,11 +100,20 @@ export default function DashboardPage() {
             .some((field) => field!.toLowerCase().includes(q));
     });
 
+    const totalPages = Math.max(1, Math.ceil(filteredModels.length / PAGE_SIZE));
+    const pageModels = filteredModels.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
     return (
         <>
             <Header />
 
             <main className="container page">
+                {offline && (
+                    <div className="status-message status-error" style={{ marginBottom: 16 }}>
+                        📡 حالت آفلاین — این آخرین لیستی است که قبلاً دیده‌ای. برای اطلاعات جدید به اینترنت وصل شو.
+                    </div>
+                )}
+
                 <div className="toolbar">
                     <Link href="/favorites">
                         <button className="btn btn-secondary">⭐ پرکاربردها</button>
@@ -99,7 +124,10 @@ export default function DashboardPage() {
                         type="text"
                         placeholder="جستجو بر اساس کد یا جنس..."
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setPage(1);
+                        }}
                     />
                 </div>
 
@@ -110,51 +138,73 @@ export default function DashboardPage() {
                         <p className="muted">مدلی پیدا نشد.</p>
                     </div>
                 ) : (
-                    <div className="grid">
-                        {filteredModels.map((model) => (
-                            <article className="card" key={model.id}>
-                                <div className="card-body">
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "flex-start",
-                                        }}
-                                    >
-                                        <div className="code">
-                                            کد کار: {model.code}
+                    <>
+                        <div className="grid">
+                            {pageModels.map((model) => (
+                                <article className="card" key={model.id}>
+                                    <div className="card-body">
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                justifyContent: "space-between",
+                                                alignItems: "flex-start",
+                                            }}
+                                        >
+                                            <div className="code">
+                                                کد کار: {model.code}
+                                            </div>
+
+                                            <StarButton
+                                                modelId={model.id}
+                                                isFavorite={favoriteIds.has(model.id)}
+                                                onChange={(fav) =>
+                                                    setFavoriteIds((current) => {
+                                                        const next = new Set(current);
+                                                        if (fav) next.add(model.id);
+                                                        else next.delete(model.id);
+                                                        return next;
+                                                    })
+                                                }
+                                            />
                                         </div>
 
-                                        <StarButton
-                                            modelId={model.id}
-                                            isFavorite={favoriteIds.has(model.id)}
-                                            onChange={(fav) =>
-                                                setFavoriteIds((current) => {
-                                                    const next = new Set(current);
-                                                    if (fav) next.add(model.id);
-                                                    else next.delete(model.id);
-                                                    return next;
-                                                })
-                                            }
-                                        />
-                                    </div>
+                                        <div className="muted">
+                                            {model.material_type_1 || "بدون جنس ثبت‌شده"}
+                                        </div>
 
-                                    <div className="muted">
-                                        {model.material_type_1 || "بدون جنس ثبت‌شده"}
+                                        <div className="card-actions">
+                                            <Link
+                                                className="btn btn-primary"
+                                                href={`/models/${model.id}`}
+                                            >
+                                                مشاهده جزئیات
+                                            </Link>
+                                        </div>
                                     </div>
+                                </article>
+                            ))}
+                        </div>
 
-                                    <div className="card-actions">
-                                        <Link
-                                            className="btn btn-primary"
-                                            href={`/models/${model.id}`}
-                                        >
-                                            مشاهده جزئیات
-                                        </Link>
-                                    </div>
-                                </div>
-                            </article>
-                        ))}
-                    </div>
+                        {totalPages > 1 && (
+                            <div className="toolbar" style={{ justifyContent: "center", marginTop: 20 }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    disabled={page <= 1}
+                                    onClick={() => setPage((p) => p - 1)}
+                                >
+                                    قبلی
+                                </button>
+                                <span className="muted">صفحه {page} از {totalPages}</span>
+                                <button
+                                    className="btn btn-secondary"
+                                    disabled={page >= totalPages}
+                                    onClick={() => setPage((p) => p + 1)}
+                                >
+                                    بعدی
+                                </button>
+                            </div>
+                        )}
+                    </>
                 )}
             </main>
         </>

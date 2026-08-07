@@ -2,14 +2,18 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { compressImage } from "@/lib/compressImage";
+import { logActivity } from "@/lib/activityLog";
 
 type ImageUploaderProps = {
     modelId: string;
+    modelCode?: string;
     onUploaded?: () => void;
 };
 
 export default function ImageUploader({
     modelId,
+    modelCode,
     onUploaded,
 }: ImageUploaderProps) {
     const [files, setFiles] = useState<File[]>([]);
@@ -44,7 +48,8 @@ export default function ImageUploader({
                 throw new Error("کاربر وارد حساب نشده است.");
             }
 
-            for (const file of files) {
+            for (const rawFile of files) {
+                const file = await compressImage(rawFile);
                 const fileExt = file.name.split(".").pop();
                 const fileName = `${crypto.randomUUID()}.${fileExt}`;
                 const filePath = `${modelId}/${fileName}`;
@@ -80,6 +85,8 @@ export default function ImageUploader({
             setFiles([]);
             setSuccess(true);
             setMessage("عکس‌ها با موفقیت آپلود شدند.");
+
+            logActivity(`آپلود ${files.length} عکس`, modelCode);
 
             onUploaded?.();
         } catch (error) {

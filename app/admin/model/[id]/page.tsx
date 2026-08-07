@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
 import ImageUploader from "@/components/ImageUploader";
 import ImageGallery from "@/components/ImageGallery";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { logActivity } from "@/lib/activityLog";
 
 type ShoeModel = {
     id: string;
@@ -33,6 +35,7 @@ export default function ModelDetailsPage() {
     const [model, setModel] = useState<ShoeModel | null>(null);
     const [loading, setLoading] = useState(true);
     const [deleting, setDeleting] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const [galleryRefresh, setGalleryRefresh] = useState(0);
 
     useEffect(() => {
@@ -84,12 +87,6 @@ export default function ModelDetailsPage() {
     async function handleDelete() {
         if (!model) return;
 
-        const confirmed = window.confirm(
-            `آیا مطمئن هستید که می‌خواهید مدل با کد "${model.code}" را حذف کنید؟`
-        );
-
-        if (!confirmed) return;
-
         setDeleting(true);
 
         const { error } = await supabase
@@ -103,6 +100,8 @@ export default function ModelDetailsPage() {
             setDeleting(false);
             return;
         }
+
+        await logActivity("حذف مدل", model.code);
 
         router.push("/admin");
         router.refresh();
@@ -174,7 +173,7 @@ export default function ModelDetailsPage() {
 
                             <button
                                 className="btn btn-danger"
-                                onClick={handleDelete}
+                                onClick={() => setConfirmOpen(true)}
                                 disabled={deleting}
                             >
                                 {deleting ? "در حال حذف..." : "🗑️ حذف مدل"}
@@ -202,6 +201,7 @@ export default function ModelDetailsPage() {
 
                     <ImageUploader
                         modelId={model.id}
+                        modelCode={model.code}
                         onUploaded={() =>
                             setGalleryRefresh((current) => current + 1)
                         }
@@ -218,6 +218,19 @@ export default function ModelDetailsPage() {
                     </Link>
                 </div>
             </main>
+
+            <ConfirmDialog
+                open={confirmOpen}
+                title="حذف مدل"
+                message={`آیا مطمئن هستید که می‌خواهید مدل با کد "${model.code}" را حذف کنید؟`}
+                confirmLabel="حذف"
+                danger
+                onCancel={() => setConfirmOpen(false)}
+                onConfirm={() => {
+                    setConfirmOpen(false);
+                    handleDelete();
+                }}
+            />
         </>
     );
 }
