@@ -181,7 +181,21 @@ export default function ModelDetailsPage() {
                         </div>
                     </div>
 
-                    <div className="detail-grid" style={{ marginTop: 18 }}>
+                    <h2 style={{ marginTop: 18 }}>تصاویر مدل</h2>
+
+                    <ImageUploader
+                        modelId={model.id}
+                        modelCode={model.code}
+                        onUploaded={() =>
+                            setGalleryRefresh((current) => current + 1)
+                        }
+                    />
+
+                    <ImageGallery modelId={model.id} refreshKey={galleryRefresh} />
+
+                    <hr />
+
+                    <div className="detail-grid">
                         {rows.map(([label, value]) => (
                             <div className="detail" key={label}>
                                 <strong>{label}</strong>
@@ -194,20 +208,6 @@ export default function ModelDetailsPage() {
                         <strong>توضیحات</strong>
                         {model.description || "توضیحی ثبت نشده است."}
                     </div>
-
-                    <hr />
-
-                    <h2>تصاویر مدل</h2>
-
-                    <ImageUploader
-                        modelId={model.id}
-                        modelCode={model.code}
-                        onUploaded={() =>
-                            setGalleryRefresh((current) => current + 1)
-                        }
-                    />
-
-                    <ImageGallery modelId={model.id} refreshKey={galleryRefresh} />
 
                     <hr />
 
