@@ -127,7 +127,11 @@ export default function ModelViewPage() {
                 <div className="panel">
                     <h1>کد کار: {model.code}</h1>
 
-                    <div className="detail-grid" style={{ marginTop: 18 }}>
+                    <ImageGallery modelId={model.id} readOnly />
+
+                    <hr style={{ margin: "22px 0" }} />
+
+                    <div className="detail-grid">
                         {rows.map(([label, value]) => (
                             <div className="detail" key={label}>
                                 <strong>{label}</strong>
@@ -144,10 +148,6 @@ export default function ModelViewPage() {
                             </div>
                         </div>
                     )}
-
-                    <hr style={{ margin: "22px 0" }} />
-
-                    <ImageGallery modelId={model.id} readOnly />
 
                     <div className="actions">
                         <Link className="btn btn-secondary" href="/dashboard">
