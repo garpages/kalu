@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
 import StarButton from "@/components/StarButton";
@@ -29,11 +29,12 @@ type ShoeModel = {
 const PAGE_SIZE = 24;
 const CACHE_KEY = "kalu_cache_admin_models";
 
-export default function AdminPage() {
+function AdminContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const selectParam = searchParams.get("select");
 
     const [models, setModels] = useState<ShoeModel[]>([]);
-    const [missingImagesCount, setMissingImagesCount] = useState(0);
     const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -44,6 +45,14 @@ export default function AdminPage() {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
     const [bulkDeleting, setBulkDeleting] = useState(false);
+
+    // انتخاب گروهی از طریق منوی سه‌خط فعال می‌شود (/admin?select=...)
+    useEffect(() => {
+        if (selectParam) {
+            setSelectMode(true);
+            setSelectedIds(new Set());
+        }
+    }, [selectParam]);
 
     useEffect(() => {
         async function loadModels() {
@@ -90,18 +99,6 @@ export default function AdminPage() {
             setModels(data || []);
             saveCache(CACHE_KEY, data || []);
 
-            const { data: imageRows } = await supabase
-                .from("model_images")
-                .select("model_id");
-
-            const idsWithImages = new Set(
-                (imageRows || []).map((row) => row.model_id)
-            );
-
-            setMissingImagesCount(
-                (data || []).filter((m) => !idsWithImages.has(m.id)).length
-            );
-
             const { data: favRows } = await supabase
                 .from("favorites")
                 .select("model_id")
@@ -135,16 +132,6 @@ export default function AdminPage() {
     const totalPages = Math.max(1, Math.ceil(filteredModels.length / PAGE_SIZE));
     const pageModels = filteredModels.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-    const materialCounts = models.reduce<Record<string, number>>((acc, m) => {
-        const key = m.material_type_1?.trim();
-        if (key) acc[key] = (acc[key] || 0) + 1;
-        return acc;
-    }, {});
-
-    const topMaterials = Object.entries(materialCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 2);
-
     function toggleSelect(id: string) {
         setSelectedIds((current) => {
             const next = new Set(current);
@@ -158,6 +145,7 @@ export default function AdminPage() {
         const selected = models.filter((m) => selectedIds.has(m.id));
         const headers = ["code", "last_code", "sole_code", "heel_code", "outsole_code", "wedge_code", "toe_work", "toe_sole", "material_type_1", "material_type_2", "hardware"];
         const rows = selected.map((m) =>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             headers.map((h) => `"${(m as any)[h] ?? ""}"`).join(",")
         );
         const csv = [headers.join(","), ...rows].join("\n");
@@ -214,34 +202,6 @@ export default function AdminPage() {
                     </div>
 
                     <div className="actions" style={{ marginTop: 0, flexWrap: "wrap" }}>
-                        <Link href="/favorites">
-                            <button className="btn btn-secondary">⭐ پرکاربردها</button>
-                        </Link>
-
-                        <Link href="/admin/missing-images">
-                            <button className="btn btn-secondary">
-                                ⚠️ بدون عکس {missingImagesCount > 0 ? `(${missingImagesCount})` : ""}
-                            </button>
-                        </Link>
-
-                        <Link href="/admin/activity">
-                            <button className="btn btn-secondary">📜 تاریخچه</button>
-                        </Link>
-
-                        <Link href="/admin/users">
-                            <button className="btn btn-secondary">👥 مدیریت کاربران</button>
-                        </Link>
-
-                        <button
-                            className="btn btn-secondary"
-                            onClick={() => {
-                                setSelectMode((v) => !v);
-                                setSelectedIds(new Set());
-                            }}
-                        >
-                            {selectMode ? "لغو انتخاب گروهی" : "☑️ انتخاب گروهی"}
-                        </button>
-
                         <Link href="/admin/add-model">
                             <button className="btn btn-primary">➕ افزودن مدل جدید</button>
                         </Link>
@@ -250,8 +210,8 @@ export default function AdminPage() {
 
                 {selectMode && (
                     <div className="panel" style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                        <span className="muted">{selectedIds.size} مورد انتخاب شده</span>
-                        <div style={{ display: "flex", gap: 8 }}>
+                        <span className="muted">انتخاب گروهی — {selectedIds.size} مورد انتخاب شده</span>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                             <button
                                 className="btn btn-secondary"
                                 disabled={selectedIds.size === 0}
@@ -266,23 +226,18 @@ export default function AdminPage() {
                             >
                                 🗑️ حذف انتخاب‌شده‌ها
                             </button>
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => {
+                                    setSelectMode(false);
+                                    setSelectedIds(new Set());
+                                }}
+                            >
+                                لغو انتخاب گروهی
+                            </button>
                         </div>
                     </div>
                 )}
-
-                <div className="stats">
-                    <div className="stat">
-                        <span className="muted">تعداد کل مدل‌ها</span>
-                        <b>{models.length}</b>
-                    </div>
-
-                    {topMaterials.map(([material, count]) => (
-                        <div className="stat" key={material}>
-                            <span className="muted">پرکاربردترین جنس: {material}</span>
-                            <b>{count}</b>
-                        </div>
-                    ))}
-                </div>
 
                 <div className="toolbar">
                     <input
@@ -411,5 +366,14 @@ export default function AdminPage() {
                 }}
             />
         </>
+    );
+}
+
+// useSearchParams در Next.js باید داخل Suspense باشد، وگرنه build خطا می‌دهد
+export default function AdminPage() {
+    return (
+        <Suspense fallback={null}>
+            <AdminContent />
+        </Suspense>
     );
 }

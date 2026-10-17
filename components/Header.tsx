@@ -5,11 +5,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-type MenuItem = { href: string; label: string };
+type MenuItem = { href: string; label: string; bulk?: boolean };
 
 const ADMIN_ITEMS: MenuItem[] = [
     { href: "/admin", label: "🏠 پنل مدیریت" },
     { href: "/admin/add-model", label: "➕ افزودن مدل جدید" },
+    { href: "/admin?select=1", label: "☑️ انتخاب گروهی", bulk: true },
     { href: "/favorites", label: "⭐ پرکاربردها" },
     { href: "/admin/workers", label: "🧵 لیست کار جمع کنی" },
     { href: "/admin/bags", label: "👜 کیف‌ها" },
@@ -142,6 +143,14 @@ export default function Header() {
                                 <Link
                                     key={item.href}
                                     href={item.href}
+                                    onClick={(e) => {
+                                        setOpen(false);
+                                        if (item.bulk) {
+                                            // هر بار مقدار متفاوت می‌فرستیم تا حتی داخل خود پنل هم کار کند
+                                            e.preventDefault();
+                                            router.push(`/admin?select=${Date.now()}`);
+                                        }
+                                    }}
                                     style={{
                                         padding: "12px 14px",
                                         borderRadius: "var(--radius-sm)",
