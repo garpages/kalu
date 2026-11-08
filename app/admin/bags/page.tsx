@@ -163,8 +163,9 @@ export default function BagsPage() {
                     <form onSubmit={handleAdd}>
                         <div className="form-grid">
                             <div className="field">
-                                <label>کد کیف *</label>
+                                <label htmlFor="bag-code">کد کیف *</label>
                                 <input
+                                    id="bag-code"
                                     className="input"
                                     value={code}
                                     onChange={(e) => setCode(e.target.value)}
@@ -173,8 +174,9 @@ export default function BagsPage() {
                             </div>
 
                             <div className="field">
-                                <label>عکس‌ها</label>
+                                <label htmlFor="bag-files">عکس‌ها</label>
                                 <input
+                                    id="bag-files"
                                     className="input"
                                     type="file"
                                     accept="image/*"
@@ -210,6 +212,7 @@ export default function BagsPage() {
                         className="input search"
                         type="text"
                         placeholder="جستجوی کد کیف..."
+                        aria-label="جستجوی کد کیف"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />

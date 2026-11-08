@@ -188,6 +188,7 @@ export default function WorkersPage() {
                             className="input"
                             style={{ flex: 1, minWidth: 200 }}
                             placeholder="نام (مثلاً افشین)"
+                            aria-label="نام نفر جدید"
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                         />
@@ -205,6 +206,7 @@ export default function WorkersPage() {
                         className="input search"
                         type="text"
                         placeholder="جستجو بر اساس نام یا کد..."
+                        aria-label="جستجو بر اساس نام یا کد"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -292,6 +294,7 @@ export default function WorkersPage() {
                                             className="input"
                                             style={{ flex: 1, minWidth: 160 }}
                                             placeholder="کد مدل (مثلاً 1200)"
+                                            aria-label={`کد مدل برای ${worker.name}`}
                                             value={codeInputs[worker.id] || ""}
                                             onChange={(e) =>
                                                 setCodeInputs((cur) => ({

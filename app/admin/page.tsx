@@ -244,6 +244,7 @@ function AdminContent() {
                         className="input search"
                         type="text"
                         placeholder="جستجو بر اساس کد، جنس، یراق یا توضیحات..."
+                        aria-label="جستجو در مدل‌ها"
                         value={search}
                         onChange={(e) => {
                             setSearch(e.target.value);
@@ -277,6 +278,7 @@ function AdminContent() {
                                                     type="checkbox"
                                                     checked={selectedIds.has(model.id)}
                                                     onChange={() => toggleSelect(model.id)}
+                                                    aria-label={`انتخاب مدل ${model.code}`}
                                                     style={{ width: 18, height: 18 }}
                                                 />
                                             )}

@@ -217,9 +217,10 @@ export default function BagDetailPage() {
                     <>
                         <div className="panel" style={{ marginBottom: 20 }}>
                             <div className="field">
-                                <label>کد کیف</label>
+                                <label htmlFor="bag-code-edit">کد کیف</label>
                                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                                     <input
+                                        id="bag-code-edit"
                                         className="input"
                                         style={{ flex: 1, minWidth: 180 }}
                                         value={codeDraft}
@@ -232,9 +233,10 @@ export default function BagDetailPage() {
                             </div>
 
                             <div className="field" style={{ marginTop: 16 }}>
-                                <label>افزودن عکس</label>
+                                <label htmlFor="bag-add-files">افزودن عکس</label>
                                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                                     <input
+                                        id="bag-add-files"
                                         className="input"
                                         style={{ flex: 1, minWidth: 220 }}
                                         type="file"

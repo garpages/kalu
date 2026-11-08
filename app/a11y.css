@@ -1,0 +1,31 @@
+/* Accessibility layer: visible keyboard focus + comfortable touch targets.
+   Kept in its own file so globals.css stays untouched. */
+:focus-visible {
+    outline: 2px solid var(--leather);
+    outline-offset: 2px;
+}
+
+.input:focus-visible,
+.textarea:focus-visible,
+.select:focus-visible {
+    outline: none; /* these already show a border + ring on :focus */
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+h1,
+h2,
+h3 {
+    text-wrap: balance;
+}
+
+@media (pointer: coarse) {
+    .btn,
+    .input,
+    .select {
+        min-height: 44px;
+    }
+}

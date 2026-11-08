@@ -1,4 +1,6 @@
+import "./fonts.css";
 import "./globals.css";
+import "./a11y.css";
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
@@ -31,6 +33,8 @@ export default function RootLayout({
 }) {
     return (
         <html lang="fa" dir="rtl">
+            <head>
+            </head>
             <body>{children}</body>
         </html>
     );
