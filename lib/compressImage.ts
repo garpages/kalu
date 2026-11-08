@@ -1,3 +1,21 @@
+let webpEncodeSupported: boolean | null = null
+
+// Not every browser can ENCODE WebP from a canvas (older Safari silently falls
+// back to PNG), so we test once and fall back to JPEG when needed.
+async function canEncodeWebp(): Promise<boolean> {
+    if (webpEncodeSupported !== null) return webpEncodeSupported
+
+    const probe = document.createElement("canvas")
+    probe.width = probe.height = 1
+
+    const blob: Blob | null = await new Promise((resolve) =>
+        probe.toBlob(resolve, "image/webp", 0.8)
+    )
+
+    webpEncodeSupported = !!blob && blob.type === "image/webp"
+    return webpEncodeSupported
+}
+
 export async function compressImage(
     file: File,
     maxWidth = 1600,
@@ -22,13 +40,20 @@ export async function compressImage(
 
     ctx.drawImage(imageBitmap, 0, 0, width, height);
 
+    const useWebp = await canEncodeWebp();
+    const type = useWebp ? "image/webp" : "image/jpeg";
+    const ext = useWebp ? ".webp" : ".jpg";
+
     const blob: Blob | null = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", quality)
+        canvas.toBlob(resolve, type, quality)
     );
 
     if (!blob) return file;
 
-    const newName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+    // Never make a small, already-optimised photo bigger.
+    if (scale === 1 && blob.size >= file.size) return file;
 
-    return new File([blob], newName, { type: "image/jpeg" });
+    const newName = file.name.replace(/\.[^.]+$/, "") + ext;
+
+    return new File([blob], newName, { type });
 }

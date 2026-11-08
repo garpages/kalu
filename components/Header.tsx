@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { clearSessionCaches, getCachedRole, setCachedRole } from "@/lib/session";
 
 type MenuItem = { href: string; label: string; bulk?: boolean };
 
@@ -38,12 +39,19 @@ export default function Header() {
 
             if (!user) return;
 
+            const cached = getCachedRole(user.id);
+            if (cached) {
+                setIsAdmin(cached === "admin");
+                return;
+            }
+
             const { data: profile } = await supabase
                 .from("profiles")
                 .select("role")
                 .eq("id", user.id)
                 .single();
 
+            if (profile?.role) setCachedRole(user.id, profile.role);
             setIsAdmin(profile?.role === "admin");
         }
 
@@ -65,6 +73,7 @@ export default function Header() {
     }, []);
 
     async function handleLogout() {
+        clearSessionCaches();
         await supabase.auth.signOut();
         router.push("/login");
     }
