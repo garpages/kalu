@@ -1,6 +1,7 @@
 import "./fonts.css";
 import "./globals.css";
 import "./a11y.css";
+import "./theme.css";
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
+import Icon from "@/components/Icon";
+import ModelThumb from "@/components/ModelThumb";
 import StarButton from "@/components/StarButton";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { logActivity } from "@/lib/activityLog";
@@ -40,6 +42,7 @@ function AdminContent() {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
     const [offline, setOffline] = useState(false);
+    const [coverByModel, setCoverByModel] = useState<Record<string, string | null>>({});
 
     const [selectMode, setSelectMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -132,6 +135,45 @@ function AdminContent() {
     const totalPages = Math.max(1, Math.ceil(filteredModels.length / PAGE_SIZE));
     const pageModels = filteredModels.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+    // first photo of each model on the current page (one small query per page)
+    const pageIds = pageModels.map((m) => m.id).join(",");
+
+    useEffect(() => {
+        const missing = pageIds
+            .split(",")
+            .filter((id) => id && !(id in coverByModel));
+        if (missing.length === 0) return;
+
+        let cancelled = false;
+
+        async function loadCovers() {
+            const { data, error } = await supabase
+                .from("model_images")
+                .select("model_id, storage_path, created_at")
+                .in("model_id", missing)
+                .order("created_at", { ascending: true });
+
+            if (cancelled || error) return;
+
+            const next: Record<string, string | null> = {};
+            missing.forEach((id) => {
+                next[id] = null;
+            });
+            for (const row of data || []) {
+                if (next[row.model_id] === null) next[row.model_id] = row.storage_path;
+            }
+
+            setCoverByModel((current) => ({ ...current, ...next }));
+        }
+
+        loadCovers();
+
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pageIds]);
+
     function toggleSelect(id: string) {
         setSelectedIds((current) => {
             const next = new Set(current);
@@ -203,7 +245,10 @@ function AdminContent() {
 
                     <div className="actions" style={{ marginTop: 0, flexWrap: "wrap" }}>
                         <Link href="/admin/add-model">
-                            <button className="btn btn-primary">➕ افزودن مدل جدید</button>
+                            <button className="btn btn-primary">
+                                <Icon name="plus" size={18} />
+                                افزودن مدل جدید
+                            </button>
                         </Link>
                     </div>
                 </div>
@@ -264,29 +309,20 @@ function AdminContent() {
                         <div className="grid">
                             {pageModels.map((model) => (
                                 <article className="card" key={model.id}>
-                                    <div className="card-body">
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                justifyContent: "space-between",
-                                                alignItems: "flex-start",
-                                                gap: 8,
-                                            }}
+                                    <div className="card-media">
+                                        <Link
+                                            href={`/admin/model/${model.id}`}
+                                            aria-label={`مشاهده مدل ${model.code}`}
+                                            tabIndex={-1}
                                         >
-                                            {selectMode && (
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedIds.has(model.id)}
-                                                    onChange={() => toggleSelect(model.id)}
-                                                    aria-label={`انتخاب مدل ${model.code}`}
-                                                    style={{ width: 18, height: 18 }}
-                                                />
-                                            )}
+                                            <ModelThumb
+                                                path={coverByModel[model.id] ?? null}
+                                                alt={`مدل ${model.code}`}
+                                                canCreate
+                                            />
+                                        </Link>
 
-                                            <div className="code" style={{ flex: 1 }}>
-                                                کد کار: {model.code}
-                                            </div>
-
+                                        <div className="card-media-star">
                                             <StarButton
                                                 modelId={model.id}
                                                 isFavorite={favoriteIds.has(model.id)}
@@ -300,6 +336,21 @@ function AdminContent() {
                                                 }
                                             />
                                         </div>
+
+                                        {selectMode && (
+                                            <label className="card-media-check">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.has(model.id)}
+                                                    onChange={() => toggleSelect(model.id)}
+                                                    aria-label={`انتخاب مدل ${model.code}`}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+
+                                    <div className="card-body">
+                                        <div className="code">کد کار: {model.code}</div>
 
                                         <div className="muted">
                                             {model.material_type_1 || "بدون جنس ثبت‌شده"}
@@ -324,7 +375,8 @@ function AdminContent() {
                                                 }
                                                 title="ساخت مدل جدید با کپی از این مدل"
                                             >
-                                                📋 کپی
+                                                <Icon name="copy" size={16} />
+                                                کپی
                                             </button>
                                         </div>
                                     </div>

@@ -16,6 +16,21 @@ async function canEncodeWebp(): Promise<boolean> {
     return webpEncodeSupported
 }
 
+// Encodes a canvas as WebP when the browser can, otherwise JPEG.
+export async function canvasToBestBlob(
+    canvas: HTMLCanvasElement,
+    quality: number
+): Promise<{ blob: Blob; type: string; ext: string } | null> {
+    const useWebp = await canEncodeWebp();
+    const type = useWebp ? "image/webp" : "image/jpeg";
+
+    const blob: Blob | null = await new Promise((resolve) =>
+        canvas.toBlob(resolve, type, quality)
+    );
+
+    return blob ? { blob, type, ext: useWebp ? ".webp" : ".jpg" } : null;
+}
+
 export async function compressImage(
     file: File,
     maxWidth = 1600,
